@@ -3,7 +3,7 @@ import msvcrt
 import time
 
 current_map = []
-win_levels = {"main": 2, "lvl1": 2, "lvl2": 0, "lvl3": 0, "lvl4": 0}
+win_levels = {"main": 2, "lvl1": 0, "lvl2": 0, "lvl3": 0, "lvl4": 0}
 current_enemies = []
 
 def Screen(map_list, c_item, last_action):
@@ -13,19 +13,20 @@ def Screen(map_list, c_item, last_action):
     curses.noecho()
     curses.cbreak()
 
-    # Creates the play area
+    # Prints the play area to the screen
     for line in range(0, 11):
         line_to_create = ""
         if line <= int(map_list[0]-1):
             for i in range(0, map_list[1]):
-                x = int((line*int(map_list[1]))+i+3)
-                line_to_create += str(map_list[x])
+                tile = int((line*int(map_list[1]))+i+3)
+                line_to_create += str(map_list[tile])
         else:
             for i in range(0, map_list[1]):
                 line_to_create += "   "
-        # Creates the insturctions
+        # The insturctions
         if line == 0:
             line_to_create += "  Use arrow keys or WASD to move.      H to restart.              Esc to exit.                   "
+        # Currently not in use, but to be impleented.
         #elif line == 1:
         #    line_to_create += "  Press V or 4 to make an action. Press X or 2 to switch what action you make.                   "
         #elif line == 2:
@@ -37,15 +38,15 @@ def Screen(map_list, c_item, last_action):
         stdscr.addstr(int(line), 0, line_to_create)
 
     stdscr.refresh()
+
 def Make_map(map_list):
-    # First value is to be in range 1-11
-    # 0 = empty, 1 = player, 2 = wall, 3 = enemy, 4 = door, 5 = key, 6 = goal, 80-99 = room_switch
+    #Transforms the data of the map into the desired "sprites".
     x = int(3+(map_list[0]*map_list[1]))
     i = 3
     for v in map_list[3:x]:
         if len(v) == 3:
             if map_list[i] == "000":
-                map_list[i] = " _ "
+                map_list[i] = " . "
                 i += 1
             elif map_list[i][0] == "1":
                 map_list[i] = " :D"
@@ -89,17 +90,18 @@ def Make_map(map_list):
                 map_list[i] = "/4\\"
                 i += 1
             else:
-                map_list[i] = "?"
+                map_list[i] = "???"
                 i += 1
     return map_list
 def Update_map(map_list, c_item, last_action):
     Screen(Make_map(map_list.copy()), c_item, last_action)
-
-    # how often the map updates on screen.
+    # How often the map updates on screen.
+    # The purpose is to have at least some time between all inputs so that the player can quickly see what happened between two simultanious imputs. 
     time.sleep(0.05)
 
 def Lose(level):
     global win_levels
+    # Gives a number that tells the level to reset itself and what to set the level victory value to when resetting the level is done.
     if win_levels[level["lvl"]] == 2:
         win_levels[level["lvl"]] = 4
     else:
@@ -399,9 +401,9 @@ def Run_main_menu(level):
     while ord(key) != escapeKey and win_levels[level["lvl"]] != 1:
         Update_map(current_map, Keys(level["inv"][0]), start_msg)
         while break_time == 0:
-            # Key Binds
+            # A script that gets the pressed keys as values instead of writing them to the screen.
             key = msvcrt.getch()
-            
+            # Reset level
             if (win_levels[level["lvl"]] != 0 and win_levels[level["lvl"]] != 2) or ord(key) == 104:
                 break_time = 1
                 if win_levels[level["lvl"]] == 2:
@@ -424,6 +426,8 @@ def Run_main_menu(level):
             elif ord(key) == 77 or ord(key) == 100:
                 Move_right(level)
                 Update_map(current_map, Keys(level["inv"][0]), "moved right    ")
+
+            # Inserts keys to main menu when a level is beaten.
             if win_levels["lvl1"] == 1 and level["80e"][1] == 1:
                 level[80][12] = "005"
                 level["80e"][1] = 0
@@ -457,9 +461,9 @@ def Run_a_level(level):
     while ord(key) != 27 and win_levels[level["lvl"]] != 1:
         Update_map(current_map, Keys(level["inv"][0]), start_msg)
         while break_time == 0:
-            # Key Binds
+            # A script that gets the pressed keys as values instead of writing them to the screen.
             key = msvcrt.getch()
-            
+            # Level reset
             if (win_levels[level["lvl"]] != 0 and win_levels[level["lvl"]] != 2) or ord(key) == 104:
                 break_time = 1
                 if win_levels[level["lvl"]] == 0:
@@ -467,6 +471,7 @@ def Run_a_level(level):
                 elif win_levels[level["lvl"]] == 2:
                     win_levels[level["lvl"]] = 4
                 break
+            # Leave level
             if ord(key) == 27:
                 if win_levels[level["lvl"]] == 2:
                     win_levels[level["lvl"]] = 1
@@ -497,7 +502,7 @@ def Run_a_level(level):
                 if win_levels[level["lvl"]] != 0 and win_levels[level["lvl"]] != 2:
                     break
 
-            # Action keys
+            # Unused action keys
             #elif ord(key) == 122 or ord(key) == 49:
             #    Update_map(current_map, Keys(level["inv"][0]), "switched item  ")
             #elif ord(key) == 120 or ord(key) == 50:
@@ -508,25 +513,22 @@ def Run_a_level(level):
             #    Update_map(current_map, Keys(level["inv"][0]), "made an action ")
             #elif ord(key) == 98 or ord(key) == 53:
             #    Update_map(current_map, Keys(level["inv"][0]), "made an action ")
-        if win_levels[level["lvl"]] == 3:
+        if win_levels[level["lvl"]] == 3 or win_levels[level["lvl"]] == 4:
             level = Reset_level(level)
             current_map = level[80]
             current_enemies = level["80e"]
-            win_levels[level["lvl"]] = 0
-            key = "i"
-            start_msg = "you died       "
-        elif win_levels[level["lvl"]] == 4:
-            level = Reset_level(level)
-            current_map = level[80]
-            current_enemies = level["80e"]
-            win_levels[level["lvl"]] = 2
+            if win_levels[level["lvl"]] == 3:
+                win_levels[level["lvl"]] = 0
+            elif win_levels[level["lvl"]] == 4:
+                win_levels[level["lvl"]] = 2
             key = "i"
             start_msg = "you died       "
         break_time = 0
 
 def Main_menu():
-    # the start position of a level
-    # "x00x" = empty, "1xxx" = player, "x02x" = wall, "xxx3" = enemy, "x04x" = door, "x05x" = key, "x06x" = goal, "x80"-"x99" = room_switch
+    # The start state of the level
+    # "000" = empty, "100" = player, "002" = wall, "xxx3x" = enemy (0 left, 1 right, 2 up, 3 down), "004" = door, "005" = key, "006" = goal, "080"-"099" = room switch
+    # "00001" - "00004" = level switch
     level_dict = {}
     
     level_dict.update({"lvl": "main"})
@@ -564,9 +566,8 @@ def Main_menu():
     return level_dict
 
 def Level_1():
-    # the start position of a level
-    # "x00x" = empty, "1xxxx" = player, "x02" = wall, "xxx3x" = enemy, "x04" = door, "x05xx" = key, "x06" = goal, "x80"-"x99" = room_switch
-    # enemy move 0 = left, 1 = right, 2 = up, 3 = down
+    # The start state of the level
+    # "000" = empty, "100" = player, "002" = wall, "xxx3x" = enemy (0 left, 1 right, 2 up, 3 down), "004" = door, "005" = key, "006" = goal, "080"-"099" = room switch
     level_dict = {}
     
     level_dict.update({"lvl": "lvl1"})
@@ -619,8 +620,8 @@ def Level_1():
     return level_dict
 
 def Level_2():
-    # the start position of a level
-    # "x00x" = empty, "1xxx" = player, "x02x" = wall, "xxx3" = enemy, "x04x" = door, "x05x" = key, "x06x" = goal, "x80"-"x99" = room_switch
+    # The start state of the level
+    # "000" = empty, "100" = player, "002" = wall, "xxx3x" = enemy (0 left, 1 right, 2 up, 3 down), "004" = door, "005" = key, "006" = goal, "080"-"099" = room switch
     level_dict = {}
     
     level_dict.update({"lvl": "lvl2"})
@@ -695,8 +696,8 @@ def Level_2():
     return level_dict
 
 def Level_3():
-    # the start position of a level
-    # "x00x" = empty, "1xxx" = player, "x02x" = wall, "xxx3" = enemy, "x04x" = door, "x05x" = key, "x06x" = goal, "x80"-"x99" = room_switch
+    # The start state of the level
+    # "000" = empty, "100" = player, "002" = wall, "xxx3x" = enemy (0 left, 1 right, 2 up, 3 down), "004" = door, "005" = key, "006" = goal, "080"-"099" = room switch
     level_dict = {}
     
     level_dict.update({"lvl": "lvl3"})
@@ -759,8 +760,8 @@ def Level_3():
     return level_dict
 
 def Level_4():
-    # the start position of a level
-    # "x00x" = empty, "1xxx" = player, "x02x" = wall, "xxx3" = enemy, "x04x" = door, "x05x" = key, "x06x" = goal, "x80"-"x99" = room_switch
+    # The start state of the level
+    # "000" = empty, "100" = player, "002" = wall, "xxx3x" = enemy (0 left, 1 right, 2 up, 3 down), "004" = door, "005" = key, "006" = goal, "080"-"099" = room switch
     level_dict = {}
     
     level_dict.update({"lvl": "lvl4"})
